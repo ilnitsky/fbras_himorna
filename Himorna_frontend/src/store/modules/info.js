@@ -28,7 +28,7 @@ export default {
     actions: {
       async fetchHistone({commit}, [histone, page, max]) {
         let result;
-        let query = `http://himorna.fbras.ru/lncrna/api/v1/info/modification?hm=${histone}&page=${page}&page_count=${max}`;
+        let query = `/lncrna/api/v1/info/modification?hm=${histone}&page=${page}&page_count=${max}`;
         try {
           await axios
           .get(query)
@@ -49,7 +49,7 @@ export default {
         commit('setGeneData', [gene, page, max, opage, omax])
         try {
           await axios
-          .get(`http://himorna.fbras.ru/lncrna/api/v1/info/gene?gene=${gene}&page=${page}&page_count=${max}&other_page=${opage}&other_page_count=${omax}`)
+          .get(`/lncrna/api/v1/info/gene?gene=${gene}&page=${page}&page_count=${max}&other_page=${opage}&other_page_count=${omax}`)
           .then(response => {
             result = response.data
             commit('setGene', result)
@@ -66,7 +66,7 @@ export default {
         let result;
         try {
           await axios
-          .get(`http://himorna.fbras.ru/lncrna/api/v1/info/lncrna?lncrna=${lncrna}&page=${page}&page_count=${max}`)
+          .get(`/lncrna/api/v1/info/lncrna?lncrna=${lncrna}&page=${page}&page_count=${max}`)
           .then(response => {
             result = response.data
             commit('setLncrna', result)
@@ -81,19 +81,19 @@ export default {
       },
       async fetchCorr({commit}, [params, page, max]) {
         let result;
-        let query = `http://himorna.fbras.ru:5001/lncrna/api/v1/info/corr?peak=${params.peak}&lncrna=${params.lncrna}&hm=${params.hm}&page=${page}&page_count=${max}`;
+        let query = `/lncrna/api/v1/info/corr?peak=${params.peak}&lncrna=${params.lncrna}&hm=${params.hm}&page=${page}&page_count=${max}`;
         console.log(query) 
         try {
           await axios
           .get(query)
           .then(response => {
-            console.log("SUCK", response)
+            console.log("ERRR1", response)
             result = response.data.response
             commit('setCorr', result)
           })
           .catch(error => {
             console.log(error);
-            console.log("BIBA")
+            console.log("ERRR2")
           })
         } catch (error) {
           console.error(error);

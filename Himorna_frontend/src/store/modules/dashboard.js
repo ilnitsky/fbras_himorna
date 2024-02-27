@@ -14,7 +14,7 @@ export default {
         let result;
         try {
           await axios
-          .get('http://himorna.fbras.ru/lncrna/api/v1/dashboard')
+          .get('/lncrna/api/v1/dashboard')
           .then(responce => {
             result = responce.data
             console.log(typeof(responce.data.table.data))
@@ -42,4 +42,5 @@ export default {
         getDashboardTable: s => s.dashboardTable
     }
   }
+  
   

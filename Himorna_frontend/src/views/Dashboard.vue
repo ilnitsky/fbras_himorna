@@ -108,16 +108,16 @@ export default {
     downloadDatabaseFile() {
       /*
       axios({
-                    url: 'http://fbras.himorna.ru/lncrna/api/v1/peaks.zst', // File URL Goes Here
+                    url: '/lncrna/api/v1/peaks.zst', // File URL Goes Here
                     method: 'GET',
                     responseType: 'blob',
                 }).then((res) => {
                      saveAs(res.data, 'peaks.zst')
                 });
                 */
-               window.open('http://himorna.fbras.ru/lncrna/api/v1/peaks.csv')
+               window.open('/lncrna/api/v1/peaks.csv')
     }
   }
-}
+} 
 
 </script>

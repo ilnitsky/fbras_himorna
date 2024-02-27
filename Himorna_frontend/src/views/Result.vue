@@ -46,7 +46,7 @@ export default {
   methods: {
     async download() {
       this.$store.dispatch('setLoader', true)
-      let query = `http://himorna.fbras.ru/lncrna/api/v1/download`;
+      let query = `/lncrna/api/v1/download`;
       let searchData = await this.$store.getters.getSearchData;
       JSON.stringify(searchData)
       axios.get(  

@@ -88,7 +88,7 @@ export default {
   methods: {
     getRawlncRNApeaks() {
         
-        window.open('http://himorna.fbras.ru/lncrna/api/v1/raw/lncrna?lncrna=' + this.$route.params.id)
+        window.open('/lncrna/api/v1/raw/lncrna?lncrna=' + this.$route.params.id)
     },
   },
   watch: {

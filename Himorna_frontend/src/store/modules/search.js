@@ -26,7 +26,7 @@ export default {
         searchData.page_count = max;
         searchData.tresholds = [state.ranges.plus, state.ranges.minus];
         JSON.stringify(searchData)
-        let query = `http://himorna.fbras.ru/lncrna/api/v1/search/results`;
+        let query = `/lncrna/api/v1/search/results`;
         
         try {
           await axios

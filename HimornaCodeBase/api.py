@@ -4,6 +4,7 @@
 # In[ ]:
 
 
+import os
 from typing import Any, Dict, List, Union
 import flask
 import json
@@ -50,8 +51,11 @@ def catch_all():
 @app.route("/api/v1/peaks.csv", methods=["GET"])
 def get_database_dump():
     # returns database dump file
+    
     try:
-        return send_file("/home/mazurovev/all.csv", attachment_filename="peaks.csv")
+        file_path = os.path.join(os.getcwd(), "files/all.csv")
+        return send_file(file_path, attachment_filename="peaks.csv")
+
     except Exception as e:
         print(f"Error occupied while trying to send db file: {e}")
         abort(500)
@@ -149,9 +153,11 @@ def _manhattan(tx, query):
     
     df = pd.DataFrame(t)
     df['center'] = df["start"] + np.ceil((df["end"] - df["start"])//2)
-    df.to_csv("/home/mazurovev/site_log/before_mn.tsv", sep="\t", index=None)
+    before_mn_file = os.path.join(os.getcwd(), "site_log", "before_mn.tsv")
+    df.to_csv(before_mn_file, sep="\t", index=None)
     df = df.apply(lambda row: [row["Histone Modification"], row['Chr'], row["center"]/(10**(len(str(row["center"])) - 3)), row['corr']], axis=1, result_type='expand')
-    df.to_csv("/home/mazurovev/site_log/mn.tsv", sep="\t", index=None)
+    mn_file = os.path.join(os.getcwd(), "site_log", "mn.tsv")
+    df.to_csv(mn_file, sep="\t", index=None)
     res = {}
     for hm in df[0].unique():
         tmp = df[df[0] == hm]
@@ -173,8 +179,12 @@ def _manhattan(tx, query):
                     except: 
                         continue
                 res[hm][number - 1].append({"x": (number - 1)*10 + row[2], "y": row[3]})
-    with open(Path("/home/mazurovev/site_log/chr.txt"), "w") as f:
-        f.write("\n\n" + str(res) + "\n")    
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
+    log_file_chr = os.path.join(log_dir, "chr.txt")
+    
+    with open(log_file_chr, "w") as f:
+        f.write("\n\n" + str(res) + "\n")
+
     return res
 
 def _search_other_peaks(tx, query):
@@ -287,17 +297,22 @@ def search():
     json_data = flask.request.get_json(force=True)
     
     db = get_db()
-    
+
     cypher, count_queries = _get_cypher_query(json_data)
    
     cypher_count = "CALL { " + " UNION ".join(count_queries) + " } " + "Return count(p) AS count"
     
     result = db.read_transaction(_search, cypher)
     # count_result = db.read_transaction(_count, cypher_count)
-    if Path("/home/mazurovev/site_log/ZBTB33.tsv").is_file():
-        pd.DataFrame(result).to_csv("/home/mazurovev/site_log/ZBTB33.tsv", index=None, mode="a", sep="\t", header="False")
+
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
+    log_file = os.path.join(log_dir, "ZBTB33.tsv")
+
+    if os.path.isfile(log_file):
+        pd.DataFrame(result).to_csv(log_file, index=None, mode="a", sep="\t", header=False)
     else:
-        pd.DataFrame(result).to_csv("/home/mazurovev/site_log/ZBTB33.tsv", index=None, sep="\t")
+        pd.DataFrame(result).to_csv(log_file, index=None, sep="\t")
+
     response = {
         "title": "Search result",
         "table": {
@@ -306,17 +321,6 @@ def search():
         }
     }
     
-    # with open(Path("/home/mazurovev/site_log/log.txt"), "a") as f:
-    #    f.write("\n\n" + str(datetime.now()) + "\n")
-    #    f.write(json.dumps(json_data))
-    #    f.write("\n")
-    #    f.write(cypher)
-    #    for i in result:
-    #        f.write(str(i) + "\n")
-    #    f.write(json.dumps(response))
-    #    f.write("\n\n")
-    #    f.write(cypher_count)
-        # f.write("count: " + str(count_result))
 
     response = flask.Response(json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
     response.headers.add("Access-Control-Allow-Origin", "*")
@@ -446,7 +450,10 @@ def lncrna_raw():
 @app.route('/api/v1/download', methods=['POST', 'GET'])
 def download():
     #json_data = json.loads(flask.request.args.get('json'))
-    with open(Path("/home/mazurovev/site_log/test_dw.txt"), "a") as f:
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
+    log_file_test = os.path.join(log_dir, "test_dw.txt")
+    
+    with open(log_file_test, "a") as f:
         f.write("Работает!")
     json_data = flask.request.get_json(force=True)
         
@@ -459,8 +466,10 @@ def download():
         res = [{"Header_1": "Histone Modification"}, {"Header_2": "lncRNA"}, {"Header_3": "Chr"}, {"Header_4": "Start"}, {"Header_5": "End"}, {"Header_6": "gene_id"}, {"Header_7": "gene_name"}, {"Header_8": "correlation"}, {"Header_9": "peak_id"}] + result
         for d in res:
             yield bytes('\t'.join(d.values()) + '\n', encoding="utf-8")
-    
-    pd.DataFrame(result).to_csv("/home/mazurovev/site_log/ZBTB33.tsv", index=None, sep="\t")
+
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
+    log_file = os.path.join(log_dir, "ZBTB33.tsv")
+    pd.DataFrame(result).to_csv(log_file, index=None, sep="\t")
     
     resp = flask.Response(generate(), status=200, mimetype='text/csv', direct_passthrough=True)
     
@@ -544,11 +553,10 @@ def corr():
     lnc = res[1]["lnc"]
     ensembl_lnc = res[1]["ensembl_id"]
 
-    
-    with open(Path("/home/ilnitsky/genes_result_4100.tab"), "r") as f:
-        himorna_to_rnachrom = pd.read_csv(Path("/home/ilnitsky/genes_result_4100.tab"), sep='\t')
+    file_path = os.path.join(os.getcwd(), "files/genes_result_4100.tab")
+    with open(file_path, "r") as f:
+        himorna_to_rnachrom = pd.read_csv(f, sep='\t')
         filtered = himorna_to_rnachrom[himorna_to_rnachrom['gene_name__RCH'] == lnc]
-        # gene_name_rch = filtered_df['gene_name__RCH'].values
         id_rch = filtered['id_RCH'].values[0]
         
         

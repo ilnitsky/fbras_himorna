@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  server:
+    build: .
+    restart: unless-stopped
+    ports:
+      # TODO: 100.65.89.103:5000 -> 127.0.0.1:<порт, на который проксирует apache на основном серве>
+      - "100.65.89.103:5000:${APACHE_PORT}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # TODO: Заменить tmp:7687 на host.docker.internal:7687
+      NEO4J_BOLT_ADDR: "tmp:7687"
+      # APACHE_PORT задаётся в .env файле
+      APACHE_PORT: ${APACHE_PORT}
+
+    # TODO: переименовать all.csv в peaks.csv, положить в отдельную папку
+    # и указать её путь здесь вместо "/root/tmpdata"
+    volumes:
+      - "/root/tmpdata:/var/www/html/data:ro"
+      # TODO: логи можно выводить в stderr, они появятся в docker
+      - "/root/site_log:/app/site_log"
+  # TODO: Удалить весь блок, если нет желания переводить neo4j под docker
+  tmp:
+    image: neo4j:latest

@@ -1,31 +1,19 @@
-
-# coding: utf-8
-
-# In[ ]:
-
-
 import os
-from typing import Any, Dict, List, Union
+from typing import List, Union
 import flask
 import json
 import pandas as pd
 import numpy as np
 from neo4j import GraphDatabase
-from pathlib import Path
 from flask_cors import CORS
-from flask import send_file, abort
 import json
-from datetime import datetime
 import csv
 import io
 
-app = flask.Flask(__name__, static_folder='dist', static_url_path="/dist")
-#app = flask.Flask(__name__)
+app = flask.Flask(__name__)
 CORS(app)
 
-# app.config["DEBUG"] = True
-
-driver = GraphDatabase.driver("bolt://localhost:7687")
+driver = GraphDatabase.driver(f"bolt://{os.environ['NEO4J_BOLT_ADDR']}")
 
 def get_db():
     if not hasattr(flask.g, 'neo4j_db'):
@@ -38,27 +26,20 @@ def close_db(error):
     if hasattr(flask.g, 'neo4j_db'):
         flask.g.neo4j_db.close()
 
-@app.route("/")
-@app.route("/browser")
-@app.route("/search")
-def catch_all():
-    return app.send_static_file("index.html")
-
-
-
 
 
 @app.route("/api/v1/peaks.csv", methods=["GET"])
 def get_database_dump():
     # returns database dump file
-    
-    try:
-        file_path = os.path.join(os.getcwd(), "files/all.csv")
-        return send_file(file_path, attachment_filename="peaks.csv")
 
-    except Exception as e:
-        print(f"Error occupied while trying to send db file: {e}")
-        abort(500)
+    # Я не знаю зачем это нужно делать через python api, когда у нас есть
+    # apache, радостно готовый выдавать гигабайтные файлы самостоятельно
+
+    # TODO: можно заменить адрес /api/v1/peaks.csv во фронтенде на /data/peaks.csv
+    # и исключить питон полностью. Пока я просто делаю redirect. Вариант с send_file
+    # закомменчен ниже
+    return flask.redirect('/data/peaks.csv')
+    # return flask.send_file("/var/www/html/data/peaks.csv", attachment_filename="peaks.csv")
 
 
 @app.route('/api/v1/dashboard', methods=['GET'])
@@ -72,55 +53,55 @@ def browser():
                 "number of peaks with corr": 841674,
                 "number of genes associated with peaks": 50788,
                 "number of tissues": 49},
-                
+
                 {"HM": "H3K27me3",
                 "number of lncRNAs with corr": 1401,
                 "number of peaks with corr": 198210,
                 "number of genes associated with peaks": 43544,
                 "number of tissues": 50},
-                
+
                 {"HM": "H3K36me3",
                 "number of lncRNAs with corr": 1321,
                 "number of peaks with corr": 342718,
                 "number of genes associated with peaks": 49875,
                 "number of tissues": 52},
-                
+
                 {"HM": "H3K4me1",
                 "number of lncRNAs with corr": 1954,
                 "number of peaks with corr": 906110,
                 "number of genes associated with peaks": 53258,
                 "number of tissues": 51},
-                
+
                 {"HM": "H3K4me2",
                 "number of lncRNAs with corr": 1031,
                 "number of peaks with corr": 447751,
                 "number of genes associated with peaks": 41151,
                 "number of tissues": 19},
-                
+
                 {"HM": "H3K4me3",
                 "number of lncRNAs with corr": 1752,
                 "number of peaks with corr": 738667,
                 "number of genes associated with peaks": 46337,
                 "number of tissues": 59},
-                
+
                 {"HM": "H3K9ac",
                 "number of lncRNAs with corr": 1104,
                 "number of peaks with corr": 78177,
                 "number of genes associated with peaks": 23634,
                 "number of tissues": 19},
-                
+
                 {"HM": "H3K9me3",
                 "number of lncRNAs with corr": 1079,
                 "number of peaks with corr": 250631,
                 "number of genes associated with peaks": 38708,
                 "number of tissues": 50},
-                
+
                 {"HM": "H3K79me2",
                 "number of lncRNAs with corr": 802,
                 "number of peaks with corr": 102280,
                 "number of genes associated with peaks": 32919,
                 "number of tissues": 20},
-                
+
                 {"HM": "H4K20me1",
                 "number of lncRNAs with corr": 841,
                 "number of peaks with corr": 61974,
@@ -129,7 +110,7 @@ def browser():
             ]
         }
     }
-    
+
     response = flask.Response(json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")
@@ -150,7 +131,7 @@ def _search_list(tx, query:str)->List[List[Union[str,int]]]:
 def _manhattan(tx, query):
     result = tx.run(query)
     t = [{"Histone Modification": record["hm"][2], "Chr": record["chr"], "start": int(record["start"]), "end": int(record["end"]), "corr": str(record["corr"])} for record in result]
-    
+
     df = pd.DataFrame(t)
     df['center'] = df["start"] + np.ceil((df["end"] - df["start"])//2)
     before_mn_file = os.path.join(os.getcwd(), "site_log", "before_mn.tsv")
@@ -161,10 +142,10 @@ def _manhattan(tx, query):
     res = {}
     for hm in df[0].unique():
         tmp = df[df[0] == hm]
-        
+
         res[hm] = []
         for _ in range(24):
-            res[hm].append([]) 
+            res[hm].append([])
         for i, row in tmp.iterrows():
             c = row[1].split("chr")[1]
             print(row[1])
@@ -176,12 +157,12 @@ def _manhattan(tx, query):
                 else:
                     try:
                         number = int(c)
-                    except: 
+                    except:
                         continue
                 res[hm][number - 1].append({"x": (number - 1)*10 + row[2], "y": row[3]})
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
     log_file_chr = os.path.join(log_dir, "chr.txt")
-    
+
     with open(log_file_chr, "w") as f:
         f.write("\n\n" + str(res) + "\n")
 
@@ -197,8 +178,8 @@ def _expression(tx, query):
 
 def _corr(tx, query):
     result = tx.run(query)
-    return [{"signal": str(round(float(record["signal"]), 2)), 
-    "expression": str(round(float(record["expression"]), 2)), 
+    return [{"signal": str(round(float(record["signal"]), 2)),
+    "expression": str(round(float(record["expression"]), 2)),
     "tissue": record["tissue"], "chrom": record["chrom"], "start": record["start"], "end": record["end"], "lnc": record["lnc"], "lnc": record["lnc"], "ensembl_id": record["ensembl_id"] } for record in result]
 
 def _count(tx, query):
@@ -225,16 +206,16 @@ def _get_cypher_query(json_data, limit=True):
         corrs_where = ""
         gene_match = ""
         skip_limit = ""
-        
+
         if json_data["lncrna"]:
             for l in json_data["lncrna"]:
                 if "ENSG" in l:
                     lnc_where.append("lnc.ensembl_id='" + l + "'")
                 else:
                     lnc_where.append("lnc.name='" + l + "'")
-        
+
             lnc_where = "(" + " OR ".join(lnc_where) + ")"
-        
+
         coords = []
         if json_data["coords"]:
             for i, c in enumerate(json_data["coords"] ):
@@ -245,12 +226,12 @@ def _get_cypher_query(json_data, limit=True):
                         c = c.split()
                 elif len(c) == 0:
                     continue
-                try:    
+                try:
                     coords.append("p.chrom=" + "'" + c[0] + "'" + " AND p.start >= " + c[1] + " AND p.end <= " + c[2])
                 except:
                     pass
         coords_where ="(" + " OR ".join(coords) + ")" if coords else ""
-        
+
         corrs = []
         if json_data["thresholds_choisen"]:
             if json_data["thresholds_choisen"][0]:  # пороги на + корреляцию
@@ -258,7 +239,7 @@ def _get_cypher_query(json_data, limit=True):
             if json_data["thresholds_choisen"][1]:  # пороги на - корреляцию
                 corrs.append("c.corr >= " + json_data["tresholds"][1][0] + " AND c.corr <= " + json_data["tresholds"][1][1])
         corrs_where = "(" + " OR ".join(corrs) + ")" if corrs else ""
-        
+
         if json_data["genes"]:
             gene_match = "Match (p)-[:IN]-(gene:Gene)"
             gene_where = []
@@ -267,13 +248,13 @@ def _get_cypher_query(json_data, limit=True):
                     gene_where.append("gene.ensembl_id='" + l + "'")
                 else:
                     gene_where.append("gene.name='" + l + "'")
-        
+
             gene_where = "(" + " OR ".join(gene_where) + ")"
-            
+
             gene_match = gene_match + " WHERE " + gene_where
         else:
             gene_match = "Optional Match (p)-[:IN]-(gene:Gene)"
-        
+
         where_clause = []
         if lnc_where:
             where_clause.append(lnc_where)
@@ -281,27 +262,27 @@ def _get_cypher_query(json_data, limit=True):
             where_clause.append(corrs_where)
         if coords_where:
             where_clause.append(coords_where)
-        
+
         hm_queries.append(base_query + (" WHERE " if where_clause else "") + " AND ".join(where_clause) + " " + gene_match + " " + result + " " + skip_limit)
-        
+
         count_queries.append(base_query + (" WHERE " if where_clause else "") + " AND ".join(where_clause) + " " + gene_match + " " + result_count)
-        
+
     page = int(json_data["page"])
     page_count = int(json_data["page_count"])
     skip_limit = "SKIP " + str((page - 1) * page_count) + " LIMIT " + str(page_count)
-    
+
     return "CALL { " + " UNION ".join(hm_queries) + " } " + "Return hm, lnc, chrom, start, end, gene, corr, name" + (" " + skip_limit if limit else ""), count_queries
 
 @app.route('/api/v1/search/results', methods=['GET', 'POST'])
 def search():
     json_data = flask.request.get_json(force=True)
-    
+
     db = get_db()
 
     cypher, count_queries = _get_cypher_query(json_data)
-   
+
     cypher_count = "CALL { " + " UNION ".join(count_queries) + " } " + "Return count(p) AS count"
-    
+
     result = db.read_transaction(_search, cypher)
     # count_result = db.read_transaction(_count, cypher_count)
 
@@ -320,7 +301,7 @@ def search():
             "data": result
         }
     }
-    
+
 
     response = flask.Response(json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
     response.headers.add("Access-Control-Allow-Origin", "*")
@@ -338,15 +319,15 @@ def modification():
     modification = flask.request.args.get('hm')
     page = int(flask.request.args.get('page'))
     page_count = int(flask.request.args.get('page_count'))
-    
+
     cypher = 'match (p:' + modification + ') where p.chrom in ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"] return p.chrom, count(p);'
-    
+
     table_cypher = 'match (p:' + modification + ')-[c:CORR]-(lnc:lncRNA) Optional match (p)-[:IN]-(g:Gene) Return labels(p) AS hm, lnc.name AS lnc, p.chrom AS chrom, p.start AS start, p.end AS end, g.name AS gene, c.corr AS corr, p.name AS name SKIP ' + str(page*page_count) + ' LIMIT ' + str(page_count)
-    
+
     cypher_count = 'match (p:' + modification + ')-[c:CORR]-(lnc:lncRNA) Optional match (p)-[:IN]-(g:Gene) Return count(p) AS count;'
-    
+
     db = get_db()
-    
+
     response = {
         "chart": {
             "title": modification + " peaks distribution",
@@ -359,7 +340,7 @@ def modification():
         }
      }
 
-    
+
     response = flask.Response(json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")
@@ -375,17 +356,17 @@ def lncrna():
 
     page = int(flask.request.args.get('page'))
     page_count = int(flask.request.args.get('page_count'))
-    
+
     cypher = 'match (lnc:lncRNA {name: "' + lncrna + '"})-[e:EXPRESS_IN]-(t:Tissue) where e.expression<>0 return distinct t.name AS tissue, avg(e.expression) AS expression order by tissue'
-    
+
     table_cypher = 'match (lnc:lncRNA {name: "' + lncrna + '"})-[c:CORR]-(p:Peak) Optional match (p)-[:IN]-(g:Gene) Return labels(p) AS hm, lnc.name AS lnc, p.chrom AS chrom, p.start AS start, p.end AS end, g.name AS gene, c.corr AS corr, p.name AS name SKIP ' + str(page*page_count) + ' LIMIT ' + str(page_count)
-    
+
     cypher_count = 'match (lnc:lncRNA {name: "' + lncrna + '"})-[c:CORR]-(p:Peak) Optional match (p)-[:IN]-(g:Gene) Return count(p) AS count;'
-    
+
     cypher_manhettan = 'match (p:Peak)-[c:CORR]-(lnc: lncRNA {name: "' + lncrna + '"})  return labels(p) AS hm, p.chrom AS chr, p.start AS start, p.end AS end, c.corr AS corr'
-    
+
     db = get_db()
-    
+
     response = {
         "chart": {
             "title": lncrna + " expression",
@@ -401,7 +382,7 @@ def lncrna():
             "data": db.read_transaction(_search, table_cypher)
         }
      }
-    
+
     response = flask.Response(json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")
@@ -412,15 +393,15 @@ def lncrna():
 @app.route('/api/v1/raw/lncrna', methods=['GET'])
 def lncrna_raw():
     lncrna = flask.request.args.get('lncrna')
-    
+
     cypher = 'match (lnc:lncRNA {name: "' + lncrna + '"})-[e:EXPRESS_IN]-(t:Tissue) where e.expression<>0 return distinct t.name AS tissue, avg(e.expression) AS expression order by tissue'
-    
+
     table_cypher = 'match (lnc:lncRNA {name: "' + lncrna + '"})-[c:CORR]-(p:Peak) Optional match (p)-[:IN]-(g:Gene) Return labels(p) AS hm, lnc.name AS lnc, p.chrom AS chrom, p.start AS start, p.end AS end, g.name AS gene, c.corr AS corr, p.name AS name'
-        
+
     cypher_manhattan = 'match (p:Peak)-[c:CORR]-(lnc: lncRNA {name: "' + lncrna + '"}) where c.corr > 0.6 or c.corr < -0.6 return labels(p) AS hm, p.chrom AS chr, p.start AS start, p.end AS end, c.corr AS corr'
-    
+
     db = get_db()
-    
+
     res = db.read_transaction(_search_list, table_cypher)
     output = io.StringIO()
     writer = csv.writer(output)
@@ -433,8 +414,8 @@ def lncrna_raw():
         }
      }
     output.seek(0)
-     
-    
+
+
     response = flask.Response(output, status=200, mimetype='text/csv')
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")
@@ -452,16 +433,16 @@ def download():
     #json_data = json.loads(flask.request.args.get('json'))
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
     log_file_test = os.path.join(log_dir, "test_dw.txt")
-    
+
     with open(log_file_test, "a") as f:
         f.write("Работает!")
     json_data = flask.request.get_json(force=True)
-        
+
     db = get_db()
-    
+
     cypher, _ = _get_cypher_query(json_data, limit=False)
     result = db.read_transaction(_search, cypher)
-    
+
     def generate():
         res = [{"Header_1": "Histone Modification"}, {"Header_2": "lncRNA"}, {"Header_3": "Chr"}, {"Header_4": "Start"}, {"Header_5": "End"}, {"Header_6": "gene_id"}, {"Header_7": "gene_name"}, {"Header_8": "correlation"}, {"Header_9": "peak_id"}] + result
         for d in res:
@@ -470,9 +451,9 @@ def download():
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
     log_file = os.path.join(log_dir, "ZBTB33.tsv")
     pd.DataFrame(result).to_csv(log_file, index=None, sep="\t")
-    
+
     resp = flask.Response(generate(), status=200, mimetype='text/csv', direct_passthrough=True)
-    
+
     resp.headers["Content-Disposition"] = "attachment; filename=export.csv"
     resp.headers["Content-Type"] = "text/csv"
     return resp
@@ -480,25 +461,25 @@ def download():
 @app.route('/api/v1/info/gene', methods=['GET'])
 def gene():
     gene = flask.request.args.get('gene')
-    
+
     page = int(flask.request.args.get('page'))
     page_count = int(flask.request.args.get('page_count'))
-    
+
     other_page = int(flask.request.args.get('other_page'))
     other_page_count = int(flask.request.args.get('other_page_count'))
-    
+
     cypher = 'match (g:Gene {name: "' + gene + '"})-[e:EXPRESS_IN]-(t:Tissue) where e.expression<>0 return distinct t.name AS tissue, avg(e.expression) AS expression order by tissue'
-    
+
     table_cypher = 'match (g: Gene {name: "' + gene + '"})-[:IN]-(p:Peak)-[c:CORR]-(lnc:lncRNA) Return labels(p) AS hm, lnc.name AS lnc, p.chrom AS chrom, p.start AS start, p.end AS end, g.name AS gene, c.corr AS corr, p.name AS name SKIP ' + str(page*page_count) + ' LIMIT ' + str(page_count)
-    
+
     other_peaks_cypher = 'match (g: Gene {name: "' + gene + '"})-[:IN]-(p:Peak) return labels(p) AS hm, p.name AS name, p.chrom AS chrom, p.start AS start, p.end AS end order by p.start, p.end SKIP ' + str(other_page*other_page_count) + ' LIMIT ' + str(other_page_count)
-    
+
     cypher_count = 'match (g: Gene {name: "' + gene + '"})-[:IN]-(p:Peak)-[c:CORR]-(lnc:lncRNA) Return count(p) AS count;'
-        
+
     cypher_other_count = 'match (g: Gene {name: "' + gene + '"})-[:IN]-(p:Peak) return count(p) AS count;'
-    
+
     db = get_db()
-    
+
     response = {
         "chart": {
             "title": gene + " expression",
@@ -515,7 +496,7 @@ def gene():
             "data": db.read_transaction(_search_other_peaks, other_peaks_cypher)
         }
      }
-    
+
     response = flask.Response(json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")
@@ -537,7 +518,7 @@ def corr():
 
     db = get_db()
     res = db.read_transaction(_corr, cypher)
-    
+
     res_chart = [{"x": r["signal"], "y": r["expression"]} for r in res]
     res_signal = dict()
     res_signal[""] = "Histone peak signal"
@@ -558,20 +539,20 @@ def corr():
         himorna_to_rnachrom = pd.read_csv(f, sep='\t')
         filtered = himorna_to_rnachrom[himorna_to_rnachrom['gene_name__RCH'] == lnc]
         id_rch = filtered['id_RCH'].values[0]
-        
-        
+
+
     res_link_coord = f'https://rnachrom2.bioinf.fbb.msu.ru/from_dna?locus={chrom}:{start}-{end}&organism=Homo+sapiens'
     res_link_lnc_name = f'https://rnachrom2.bioinf.fbb.msu.ru/basic_graphical_summary?name={lnc}&organism=Homo+sapiens'
     res_link_full = f'https://rnachrom2.bioinf.fbb.msu.ru/basic_graphical_summary_dna_filter?locus={chrom}:{start}-{end}&name={lnc}&rnaID={id_rch}&organism=Homo+sapiens'
 
 
-    
+
     response = {"response": {
                     "title":  hm + " peakq " + peak_id + "lncRNA " + lncrna + " correlation plot1",
                     "title_peak": hm + " peak " + peak_id,
                     "title_lncrna": "lncRNA " + lncrna + " correlation plot",
                     "link_coord": res_link_coord,
-                    "link_lnc_name": res_link_full, 
+                    "link_lnc_name": res_link_full,
                     "link": res_link_lnc_name,
                     "chart": {
                         "points": res_chart
@@ -583,7 +564,7 @@ def corr():
     }}
     print(response)
     response = flask.Response(json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
-    
+
 
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")

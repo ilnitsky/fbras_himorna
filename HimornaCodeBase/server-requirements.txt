@@ -1,0 +1,4 @@
+# Installs stuff needed for the server to run
+# For development install poetry and run `poetry install`
+mod_wsgi==5.0.0
+poetry==1.8.2

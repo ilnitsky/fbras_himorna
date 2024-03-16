@@ -1,6 +1,6 @@
 <template>
     <main class="main">
-        <Header />
+        <MyHeader />
         <section class="detail">
             <div class="wrap">
                 <h2 class="section-title">LncRNA: {{$route.params.id}}</h2>
@@ -18,20 +18,20 @@
                   <ChartBarplot :data="barplot" :labels="lncrna.barplot.labels" />
                 </div>
                 <Links v-if="lncrna" :data="lncrna.links" />
-                <Table :max="10" title="Data by choosen lncRNA" v-if="lncrna" :data="getData.table || lncrna.table" />
+                <MyTable :max="10" title="Data by choosen lncRNA" v-if="lncrna" :data="getData.table || lncrna.table" />
                 <div class="button orange" @click="getRawlncRNApeaks()">
                     <p>Download whole table</p>
                 </div>
             </div>
         </section>
         <Loader />
-        <Footer />
+        <MyFooter />
     </main>
 </template>
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import Table from '@/components/Table';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
+import MyTable from '@/components/MyTable';
 import Links from '@/components/Links';
 import Loader from '@/components/Loader';
 import ChartPeaks from '@/components/charts/ChartPeaks'
@@ -41,11 +41,11 @@ import vSelect from 'vue-select'
 export default {
   name: 'lncrna',
   components: {
-    Header,
-    Table,
+    MyHeader,
+    MyTable,
     Links,
     Loader,
-    Footer,
+    MyFooter,
     ChartBarplot,
     ChartPeaks,
     vSelect
@@ -72,7 +72,7 @@ export default {
     let count = false;
     this.histones = [];
     if (this.lncrna.barplot) {
-      
+
       for (const key in this.lncrna.barplot.elements) {
         if (!count) {
         count = true
@@ -87,7 +87,7 @@ export default {
   },
   methods: {
     getRawlncRNApeaks() {
-        
+
         window.open('/lncrna/api/v1/raw/lncrna?lncrna=' + this.$route.params.id)
     },
   },

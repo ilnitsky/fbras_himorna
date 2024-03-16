@@ -1,6 +1,6 @@
 <template>
     <main class="main">
-        <Header />
+        <MyHeader />
         <section class="detail">
             <div class="wrap">
                 <h2 class="section-title">Histone modification: {{$route.params.id}}</h2>
@@ -13,27 +13,27 @@
                       <h4>There is no data</h4>
                   </div>
                 </div>
-                <Table :max="10" v-if="modification" :data="getData.table || modification.table" />
+                <MyTable :max="10" v-if="modification" :data="getData.table || modification.table" />
             </div>
         </section>
         <Loader />
-        <Footer />
+        <MyFooter />
     </main>
 </template>
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import Table from '@/components/Table';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
+import MyTable from '@/components/MyTable';
 import Loader from '@/components/Loader';
 import ChartPeaks from '@/components/charts/ChartPeaks'
 
 export default {
   name: 'histone',
   components: {
-    Header,
-    Table,
+    MyHeader,
+    MyTable,
     Loader,
-    Footer,
+    MyFooter,
     ChartPeaks
   },
   data() {

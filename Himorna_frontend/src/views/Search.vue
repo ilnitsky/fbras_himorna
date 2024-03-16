@@ -1,6 +1,6 @@
 <template>
   <main class="main">
-    <Header />
+    <MyHeader />
 
     <section class="section search">
       <form class="wrap" @submit.prevent="sendData()">
@@ -151,7 +151,7 @@
             </div>
             <div class="search-wrap">
                 <div class="search-string">
-                    <textarea ref="ta" class="textarea" id="coords" cols="30" rows="8" placeholder="Add one by one via tab, example: 
+                    <textarea ref="ta" class="textarea" id="coords" cols="30" rows="8" placeholder="Add one by one via tab, example:
 chrX    73944182    74070408" v-model="coordsInput" @keyup="changeCoords" @keydown.tab.prevent="setTab()"></textarea>
                 </div>
                 <div class="search-string">
@@ -233,13 +233,13 @@ chrX    73944182    74070408" v-model="coordsInput" @keyup="changeCoords" @keydo
     </section>
     <Loader />
     <Notification v-if="warning.open" :title="warning.title"/>
-    <Footer />
+    <MyFooter />
   </main>
 </template>
 
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
 import Slider from '@/components/ui/Slider';
 import Loader from '@/components/Loader';
 import Notification from '@/components/Notification';
@@ -248,8 +248,8 @@ import UploadButton from 'vuetify-upload-button'
 export default {
   name: 'dashboard',
   components: {
-    Header,
-    Footer,
+    MyHeader,
+    MyFooter,
     Slider,
     Loader,
     Notification,

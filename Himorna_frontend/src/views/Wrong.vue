@@ -1,21 +1,21 @@
 <template>
     <main class="main">
-        <Header />
+        <MyHeader />
         <section class="wrong">
             <div class="wrap">
                 <p class="wrong__text">There's nothing here ¯\_(ツ)_/¯</p>
             </div>
         </section>
-        <Footer />
+        <MyFooter />
     </main>
 </template>
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
 export default {
     components: {
-        Header,
-        Footer
+        MyHeader,
+        MyFooter
     }
 }
 </script>

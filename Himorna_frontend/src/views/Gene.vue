@@ -1,6 +1,6 @@
 <template>
     <main class="main">
-        <Header />
+        <MyHeader />
         <section class="detail">
             <div class="wrap">
                 <h2 class="section-title">Gene: {{$route.params.id}}</h2>
@@ -14,18 +14,18 @@
                   </div>
                 </div>
                 <Links v-if="gene" :data="getData.links || gene.links" />
-                <Table title="Data by choosen lncRNA" :max="10" v-if="gene" :data="getData.table || gene.table" />
-                <Table class="double-top" :num='2' :max="10" v-if="gene" :data="getData.other_peaks_table || gene.other_peaks_table" />
+                <MyTable title="Data by choosen lncRNA" :max="10" v-if="gene" :data="getData.table || gene.table" />
+                <MyTable class="double-top" :num='2' :max="10" v-if="gene" :data="getData.other_peaks_table || gene.other_peaks_table" />
             </div>
         </section>
-        <Footer />
+        <MyFooter />
         <Loader />
     </main>
 </template>
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import Table from '@/components/Table';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
+import MyTable from '@/components/MyTable';
 import Links from '@/components/Links';
 import Loader from '@/components/Loader';
 import ChartPeaks from '@/components/charts/ChartPeaks'
@@ -33,11 +33,11 @@ import ChartPeaks from '@/components/charts/ChartPeaks'
 export default {
   name: 'gene',
   components: {
-    Header,
-    Table,
+    MyHeader,
+    MyTable,
     Links,
     Loader,
-    Footer,
+    MyFooter,
     ChartPeaks
   },
   data() {

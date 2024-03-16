@@ -8,7 +8,7 @@
 </template>
 <script>
 export default {
-    name: 'link',
+    name: 'mylink',
     props: {
         data: {
             type: Array,

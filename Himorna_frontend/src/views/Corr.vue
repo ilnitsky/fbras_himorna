@@ -1,6 +1,6 @@
 <template>
     <main class="main">
-        <Header />
+        <MyHeader />
         <section class="detail">
             <div class="wrap">
                 <h2 v-if="getdata || corr" class="section-title">
@@ -17,19 +17,19 @@
                   </div>
                 </div>
 
- 
+
                 <Links v-if="corr" :data="corr.links" />
-                <Table class="table-wrap_long" :max="10" title="Data by choosen Correlation" v-if="getData || corr" :data="getData.table || corr.table" />
+                <MyTable class="table-wrap_long" :max="10" title="Data by choosen Correlation" v-if="getData || corr" :data="getData.table || corr.table" />
                 <Loader />
             </div>
         </section>
-        <Footer />
+        <MyFooter />
     </main>
 </template>
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import Table from '@/components/Table';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
+import MyTable from '@/components/MyTable';
 import Links from '@/components/Links';
 import Loader from '@/components/Loader';
 import ChartCombo from '@/components/charts/ChartCombo'
@@ -37,10 +37,10 @@ import ChartCombo from '@/components/charts/ChartCombo'
 export default {
   name: 'lncrna',
   components: {
-    Header,
-    Table,
+    MyHeader,
+    MyTable,
     Links,
-    Footer,
+    MyFooter,
     Loader,
     ChartCombo
   },

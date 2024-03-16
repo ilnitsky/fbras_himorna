@@ -27,7 +27,7 @@ export default {
         searchData.tresholds = [state.ranges.plus, state.ranges.minus];
         JSON.stringify(searchData)
         let query = `/lncrna/api/v1/search/results`;
-        
+
         try {
           await axios
           .post(query, searchData, {headers: {'Content-Type': 'application/json'}, timeout: 180000})
@@ -56,4 +56,3 @@ export default {
         getRanges: s => s.ranges
     }
   }
-  

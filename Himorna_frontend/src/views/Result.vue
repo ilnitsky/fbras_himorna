@@ -1,6 +1,6 @@
 <template>
     <main class="main">
-        <Header />
+        <MyHeader />
         <section class="result">
             <div class="wrap">
                 <div class="result-header">
@@ -10,27 +10,27 @@
                     <p>Download</p>
                   </a>
                 </div>
-                <Table :max="10" v-if="results" :data="getTable.table || results.table" />
+                <MyTable :max="10" v-if="results" :data="getTable.table || results.table" />
             </div>
         </section>
         <Loader />
-        <Footer />
+        <MyFooter />
     </main>
 </template>
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import Table from '@/components/Table';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
+import MyTable from '@/components/MyTable';
 import Loader from '@/components/Loader';
 import axios from 'axios'
 
 export default {
   name: 'result',
   components: {
-    Header,
-    Table,
+    MyHeader,
+    MyTable,
     Loader,
-    Footer
+    MyFooter
   },
   data() {
     return {
@@ -48,20 +48,18 @@ export default {
       this.$store.dispatch('setLoader', true)
       let query = `/lncrna/api/v1/download`;
       let searchData = await this.$store.getters.getSearchData;
-      JSON.stringify(searchData)
-      axios.get(  
+      axios.post(
           query,
-          searchData,
+          JSON.stringify(searchData),
           {
             responseType: 'blob',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/pdf'
+                'Accept': 'application/csv',
             },
             timeout: 1000 * 60 * 60 * 24 * 7
         })
         .then(({ data }) => {
-          this.$store.dispatch('setLoader', false)
           const downloadUrl = window.URL.createObjectURL(new Blob([data]));
           const link = document.createElement('a');
           link.href = downloadUrl;
@@ -69,7 +67,12 @@ export default {
           document.body.appendChild(link);
           link.click();
           link.remove();
-        });
+        })
+        .finally(()=>{
+          this.$store.dispatch('setLoader', false);
+        })
+
+        ;
       }
   },
   async mounted () {

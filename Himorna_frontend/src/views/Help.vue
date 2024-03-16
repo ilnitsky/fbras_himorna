@@ -1,6 +1,6 @@
 <template>
   <main class="main">
-    <Header />
+    <MyHeader />
 
     <section class="section help">
       <div class="wrap">
@@ -39,19 +39,19 @@
           </div>
       </div>
     </section>
-    <Footer />
+    <MyFooter />
   </main>
 </template>
 
 <script>
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import MyHeader from '@/components/MyHeader';
+import MyFooter from '@/components/MyFooter';
 
 export default {
   name: 'dashboard',
   components: {
-    Header,
-    Footer,
+    MyHeader,
+    MyFooter,
   },
   data() {
     return {

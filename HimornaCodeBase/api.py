@@ -9,11 +9,22 @@ from flask_cors import CORS
 import json
 import csv
 import io
+import itertools
 
 app = flask.Flask(__name__)
 CORS(app)
 
 driver = GraphDatabase.driver(f"bolt://{os.environ['NEO4J_BOLT_ADDR']}")
+import contextlib
+
+log_dir = os.environ.get("LOG_DIR")
+
+@contextlib.contextmanager
+def log_file(file_name: str):
+    if log_dir is None:
+        yield "/dev/null"
+    else:
+        yield os.path.join(log_dir, file_name)
 
 def get_db():
     if not hasattr(flask.g, 'neo4j_db'):
@@ -134,11 +145,12 @@ def _manhattan(tx, query):
 
     df = pd.DataFrame(t)
     df['center'] = df["start"] + np.ceil((df["end"] - df["start"])//2)
-    before_mn_file = os.path.join(os.getcwd(), "site_log", "before_mn.tsv")
-    df.to_csv(before_mn_file, sep="\t", index=None)
+
+    with log_file("before_mn.tsv") as file:
+        df.to_csv(file, sep="\t", index=False)
     df = df.apply(lambda row: [row["Histone Modification"], row['Chr'], row["center"]/(10**(len(str(row["center"])) - 3)), row['corr']], axis=1, result_type='expand')
-    mn_file = os.path.join(os.getcwd(), "site_log", "mn.tsv")
-    df.to_csv(mn_file, sep="\t", index=None)
+    with log_file("before_mn.tsv") as file:
+        df.to_csv(file, sep="\t", index=False)
     res = {}
     for hm in df[0].unique():
         tmp = df[df[0] == hm]
@@ -160,11 +172,9 @@ def _manhattan(tx, query):
                     except:
                         continue
                 res[hm][number - 1].append({"x": (number - 1)*10 + row[2], "y": row[3]})
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
-    log_file_chr = os.path.join(log_dir, "chr.txt")
-
-    with open(log_file_chr, "w") as f:
-        f.write("\n\n" + str(res) + "\n")
+    with log_file("chr.txt") as file:
+        with open(file, "w") as f:
+            f.write("\n\n" + str(res) + "\n")
 
     return res
 
@@ -286,13 +296,8 @@ def search():
     result = db.read_transaction(_search, cypher)
     # count_result = db.read_transaction(_count, cypher_count)
 
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
-    log_file = os.path.join(log_dir, "ZBTB33.tsv")
-
-    if os.path.isfile(log_file):
-        pd.DataFrame(result).to_csv(log_file, index=None, mode="a", sep="\t", header=False)
-    else:
-        pd.DataFrame(result).to_csv(log_file, index=None, sep="\t")
+    with log_file("ZBTB33.tsv") as file:
+        pd.DataFrame(result).to_csv(file, index=False, mode="a", sep="\t", header=(not os.path.isfile(file)))
 
     response = {
         "title": "Search result",
@@ -316,9 +321,9 @@ def search():
 
 @app.route('/api/v1/info/modification', methods=['GET'])
 def modification():
-    modification = flask.request.args.get('hm')
-    page = int(flask.request.args.get('page'))
-    page_count = int(flask.request.args.get('page_count'))
+    modification = flask.request.args["hm"]
+    page = int(flask.request.args['page'])
+    page_count = int(flask.request.args['page_count'])
 
     cypher = 'match (p:' + modification + ') where p.chrom in ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"] return p.chrom, count(p);'
 
@@ -352,10 +357,10 @@ def modification():
 
 @app.route('/api/v1/info/lncrna', methods=['GET'])
 def lncrna():
-    lncrna = flask.request.args.get('lncrna')
+    lncrna = flask.request.args['lncrna']
 
-    page = int(flask.request.args.get('page'))
-    page_count = int(flask.request.args.get('page_count'))
+    page = int(flask.request.args['page'])
+    page_count = int(flask.request.args['page_count'])
 
     cypher = 'match (lnc:lncRNA {name: "' + lncrna + '"})-[e:EXPRESS_IN]-(t:Tissue) where e.expression<>0 return distinct t.name AS tissue, avg(e.expression) AS expression order by tissue'
 
@@ -392,7 +397,7 @@ def lncrna():
 
 @app.route('/api/v1/raw/lncrna', methods=['GET'])
 def lncrna_raw():
-    lncrna = flask.request.args.get('lncrna')
+    lncrna = flask.request.args['lncrna']
 
     cypher = 'match (lnc:lncRNA {name: "' + lncrna + '"})-[e:EXPRESS_IN]-(t:Tissue) where e.expression<>0 return distinct t.name AS tissue, avg(e.expression) AS expression order by tissue'
 
@@ -430,12 +435,6 @@ def lncrna_raw():
 # In[31]:
 @app.route('/api/v1/download', methods=['POST', 'GET'])
 def download():
-    #json_data = json.loads(flask.request.args.get('json'))
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
-    log_file_test = os.path.join(log_dir, "test_dw.txt")
-
-    with open(log_file_test, "a") as f:
-        f.write("Работает!")
     json_data = flask.request.get_json(force=True)
 
     db = get_db()
@@ -444,13 +443,45 @@ def download():
     result = db.read_transaction(_search, cypher)
 
     def generate():
-        res = [{"Header_1": "Histone Modification"}, {"Header_2": "lncRNA"}, {"Header_3": "Chr"}, {"Header_4": "Start"}, {"Header_5": "End"}, {"Header_6": "gene_id"}, {"Header_7": "gene_name"}, {"Header_8": "correlation"}, {"Header_9": "peak_id"}] + result
-        for d in res:
-            yield bytes('\t'.join(d.values()) + '\n', encoding="utf-8")
+        # порядок обхода
+        field_order = (
+            "Histone Modification",
+            "lncRNA",
+            "Chr",
+            "Start",
+            "End",
+            "Gene",
+            "Corr",
+            "Peak Id",
+        )
+        header = {
+            "Histone Modification": "Histone Modification",
+            "lncRNA": "lncRNA",
+            "Chr": "Chr",
+            "Start": "Start",
+            "End": "End",
+            "Gene": "gene_id",
+            "Corr": "correlation",
+            "Peak Id": "peak_id"
+        }
 
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_log")
-    log_file = os.path.join(log_dir, "ZBTB33.tsv")
-    pd.DataFrame(result).to_csv(log_file, index=None, sep="\t")
+        buf = bytearray()
+        for d in itertools.chain((header,), result):
+            buf.clear()
+            for field in field_order:
+                buf.extend(b"\t") # adds an extra tab
+                val = d.get(field)
+                if isinstance(val, str):
+                    buf.extend(val.encode())
+                elif val is None:
+                    continue
+                else:
+                    buf.extend(str(val).encode())
+            buf.extend(b"\n")
+            yield bytes(buf[1:]) # excluding extra tab
+
+    with log_file("ZBTB33.tsv") as file:
+        pd.DataFrame(result).to_csv(file, index=False, sep="\t")
 
     resp = flask.Response(generate(), status=200, mimetype='text/csv', direct_passthrough=True)
 
@@ -460,13 +491,13 @@ def download():
 
 @app.route('/api/v1/info/gene', methods=['GET'])
 def gene():
-    gene = flask.request.args.get('gene')
+    gene = flask.request.args['gene']
 
-    page = int(flask.request.args.get('page'))
-    page_count = int(flask.request.args.get('page_count'))
+    page = int(flask.request.args['page'])
+    page_count = int(flask.request.args['page_count'])
 
-    other_page = int(flask.request.args.get('other_page'))
-    other_page_count = int(flask.request.args.get('other_page_count'))
+    other_page = int(flask.request.args['other_page'])
+    other_page_count = int(flask.request.args['other_page_count'])
 
     cypher = 'match (g:Gene {name: "' + gene + '"})-[e:EXPRESS_IN]-(t:Tissue) where e.expression<>0 return distinct t.name AS tissue, avg(e.expression) AS expression order by tissue'
 
@@ -502,15 +533,11 @@ def gene():
     response.headers.add("Access-Control-Allow-Methods", "*")
     return response
 
-
-# In[34]:
-
-
 @app.route('/api/v1/info/corr', methods=['GET'])
 def corr():
-    lncrna = flask.request.args.get('lncrna')
-    hm = flask.request.args.get('hm')
-    peak_id = flask.request.args.get('peak')
+    lncrna = flask.request.args['lncrna']
+    hm = flask.request.args['hm']
+    peak_id = flask.request.args['peak']
     print(lncrna, hm, peak_id)
 
     cypher = 'MATCH (p:' + hm + ' {name: "' + peak_id + '"})-[c:CHIPSEQ_IN]-(t:Tissue)-[e:EXPRESS_IN]-(lnc:lncRNA {name: "' + lncrna + '"}) RETURN lnc.name AS lnc, lnc.ensembl_id AS ensembl_id, t.name AS tissue, c.signal AS signal, avg(e.expression) AS expression, p.chrom AS chrom, p.start AS start, p.end AS end'
@@ -569,4 +596,3 @@ def corr():
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")
     return response
-

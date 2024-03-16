@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "himornacodebase"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Flask = "^3.0.2"
+Flask-Cors = "^4.0.0"
+neo4j = "^5.18.0"
+pandas = "^2.2.1"
+# mod-wsgi = "^5.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,7 +1,5 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-// import axios from 'axios'
-// import firebase from 'firebase/app'
 
 Vue.use(VueRouter)
 
@@ -46,14 +44,14 @@ const routes = [
     name: 'Corr',
     component: () => import('@/views/Corr')
   },
-  { 
-    path: '/404', 
-    name: '404', 
-    component: () => import('@/views/Wrong'), 
-  }, 
-  { 
-    path: '*', 
-    redirect: '/404' 
+  {
+    path: '/404',
+    name: '404',
+    component: () => import('@/views/Wrong'),
+  },
+  {
+    path: '*',
+    redirect: '/404'
   }
 ]
 
